@@ -1,22 +1,162 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="fi">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>tonienstrom.github.io</title>
-       <style>
-        body {
-            background-color: #333333;
-            font-size: 16px;
-        }
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>tonienstrom.github.io</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
 
-    </style>
+    body {
+      background: #5533AA;
+
+
+      min-height: 100vh;
+      font-family: 'Courier New', Courier, monospace;
+    }
+
+    .c64-border {
+      background: #7B50E0;
+      padding: 24px;
+      border-radius: 4px;
+      width: fit-content;
+      margin: 30px auto 0 auto;
+    }
+
+    .c64-inner {
+      background: #3333AA;
+      padding: 1.5rem 2rem;
+      width: 640px;
+      max-width: 90vw;
+      min-height: 340px;
+    }
+
+    .c64-text {
+      color: #6666FF;
+      font-size: 15px;
+      line-height: 1.6;
+      white-space: pre;
+      text-transform: uppercase;
+    }
+
+    .c64-top {
+      color: #6666FF;
+      font-size: 15px;
+      line-height: 1.6;
+      text-transform: uppercase;
+      margin-bottom: 1.5rem;
+      white-space: pre;
+    }
+
+    .c64-history {
+      color: #6666FF;
+      font-size: 15px;
+      text-transform: uppercase;
+      white-space: pre-wrap;
+    }
+
+    .c64-response {
+      color: #aaaaff;
+      font-size: 15px;
+      white-space: pre;
+    }
+
+    .c64-input-row {
+      display: flex;
+      align-items: center;
+      margin-top: 4px;
+    }
+
+    .c64-input {
+      background: transparent;
+      border: none;
+      outline: none;
+      color: #6666FF;
+      font-family: 'Courier New', Courier, monospace;
+      font-size: 15px;
+      text-transform: uppercase;
+      caret-color: #6666FF;
+      width: 100%;
+      letter-spacing: 0.5px;
+    }
+
+    .c64-input::selection {
+      background: #6666FF;
+      color: #3333AA;
+    }
+  </style>
 </head>
 <body>
-<center>
-    <br>
-    <br>
 
-</center>
+  <div class="c64-border">
+    <div class="c64-inner">
+      <div class="c64-top">    **** TONIENSTROM GITHUB IO V1 ****
+
+ 64K RAM SYSTEM  314159 BASIC BYTES FREE
+
+READY.</div>
+      <div class="c64-history" id="history"></div>
+      <div class="c64-input-row">
+        <span class="c64-text">&#9646;&nbsp;</span>
+        <input class="c64-input" id="cmd" type="text" autocomplete="off" spellcheck="false" maxlength="80" />
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const input = document.getElementById('cmd');
+    const history = document.getElementById('history');
+
+    const responses = {
+      'help':       '? COMMANDS: HELP, LIST, LOAD, RUN, SYS, POKE, PRINT, NEW, CLR',
+      'list':       '10 PRINT "HELLO WORLD!"\n20 GOTO 10',
+      'run':        'HELLO WORLD!\nHELLO WORLD!\nHELLO WORLD!\nBREAK IN 20',
+      'new':        'READY.',
+      'clr':        'READY.',
+      'sys 64738':  'RESTARTING...',
+      'poke 53280,0': 'READY.',
+      'poke 53281,0': 'READY.',
+      'load':       'SEARCHING FOR PROGRAM...\nPRESS PLAY ON TAPE',
+    };
+
+    input.focus();
+
+    input.addEventListener('keydown', function(e) {
+      if (e.key !== 'Enter') return;
+      const val = input.value.trim();
+      if (!val) return;
+
+      const line = document.createElement('div');
+      line.textContent = '\u25a6 ' + val.toUpperCase();
+      history.appendChild(line);
+
+      const key = val.toLowerCase();
+      let resp = null;
+
+      for (const k in responses) {
+        if (key === k || key.startsWith(k + ' ')) {
+          resp = responses[k];
+          break;
+        }
+      }
+
+      if (!resp) {
+        if (key.startsWith('print ')) {
+          const m = val.match(/PRINT\s+"?([^"]*)"?/i);
+          resp = m ? m[1].toUpperCase() : '?SYNTAX  ERROR\nREADY.';
+        } else {
+          resp = '?SYNTAX  ERROR\nREADY.';
+        }
+      }
+
+      const rline = document.createElement('div');
+      rline.className = 'c64-response';
+      rline.textContent = resp;
+      history.appendChild(rline);
+
+      input.value = '';
+    });
+  </script>
+
 </body>
 </html>
