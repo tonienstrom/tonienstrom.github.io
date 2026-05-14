@@ -5,14 +5,13 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>tonienstrom.github.io</title>
   <style>
+    @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap');
     * { box-sizing: border-box; margin: 0; padding: 0; }
 
     body {
       background: #5533AA;
-
-
       min-height: 100vh;
-      font-family: 'Courier New', Courier, monospace;
+      font-family: 'Share Tech Mono', 'Courier New', monospace;
     }
 
     .c64-border {
@@ -25,9 +24,15 @@
 
     .c64-inner {
       background: #3333AA;
-      padding: 1.5rem 2rem;
       width: 640px;
       max-width: 90vw;
+      min-height: 340px;
+      position: relative;
+    }
+
+    /* Terminal view */
+    #terminal {
+      padding: 1.5rem 2rem;
       min-height: 340px;
     }
 
@@ -72,7 +77,7 @@
       border: none;
       outline: none;
       color: #6666FF;
-      font-family: 'Courier New', Courier, monospace;
+      font-family: 'Share Tech Mono', 'Courier New', monospace;
       font-size: 15px;
       text-transform: uppercase;
       caret-color: #6666FF;
@@ -84,40 +89,167 @@
       background: #6666FF;
       color: #3333AA;
     }
+
+    /* Animation view */
+    #anim-view {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    #anim-view canvas {
+      display: block;
+      width: 100%;
+      line-height: 0;
+    }
+
   </style>
 </head>
 <body>
 
   <div class="c64-border">
     <div class="c64-inner">
-      <div class="c64-top">    **** TONIENSTROM GITHUB IO V1 ****
+
+      <!-- Terminal -->
+      <div id="terminal">
+        <div class="c64-top">    **** TONIENSTROM GITHUB IO V1 ****
 
  64K RAM SYSTEM  314159 BASIC BYTES FREE
 
 READY.</div>
-      <div class="c64-history" id="history"></div>
-      <div class="c64-input-row">
-        <span class="c64-text">&#9646;&nbsp;</span>
-        <input class="c64-input" id="cmd" type="text" autocomplete="off" spellcheck="false" maxlength="80" />
+        <div class="c64-history" id="history"></div>
+        <div class="c64-input-row">
+          <span class="c64-text">&#9646;&nbsp;</span>
+          <input class="c64-input" id="cmd" type="text" autocomplete="off" spellcheck="false" maxlength="80" />
+        </div>
       </div>
+
+      <!-- Animation -->
+      <div id="anim-view">
+        <canvas id="c"></canvas>
+      </div>
+
     </div>
   </div>
 
   <script>
     const input = document.getElementById('cmd');
     const history = document.getElementById('history');
+    const terminal = document.getElementById('terminal');
+    const animView = document.getElementById('anim-view');
+    const canvas = document.getElementById('c');
+    const ctx = canvas.getContext('2d');
 
     const responses = {
-      'help':       '? COMMANDS: HELP, LIST, LOAD, RUN, SYS, POKE, PRINT, NEW, CLR',
-      'list':       '10 PRINT "HELLO WORLD!"\n20 GOTO 10',
-      'run':        'HELLO WORLD!\nHELLO WORLD!\nHELLO WORLD!\nBREAK IN 20',
-      'new':        'READY.',
-      'clr':        'READY.',
-      'sys 64738':  'RESTARTING...',
+      'help':         '? COMMANDS: HELP, LIST, LOAD, RUN, SYS, POKE, PRINT, NEW, CLR',
+      'list':         '10 PRINT "HELLO WORLD!"\n20 GOTO 10',
+      'new':          'READY.',
+      'clr':          'READY.',
+      'sys 64738':    'RESTARTING...',
       'poke 53280,0': 'READY.',
       'poke 53281,0': 'READY.',
-      'load':       'SEARCHING FOR PROGRAM...\nPRESS PLAY ON TAPE',
+      'load':         'SEARCHING FOR PROGRAM...\nPRESS PLAY ON TAPE',
     };
+
+    const COLORS = [
+      '#000000','#FFFFFF','#883932','#67B6BD',
+      '#8B3F96','#55A049','#40318D','#BFCE72',
+      '#8B5429','#574200','#B86962','#505050',
+      '#787878','#94E089','#7869C4','#9F9F9F',
+      '#6666FF','#FF6666','#66FF66','#FFFF66',
+      '#FF66FF','#66FFFF','#FF9900','#AA44AA',
+    ];
+
+    let bars = [];
+    let rafId = null;
+    let lastTime = 0;
+    let animTimeout = null;
+    let msgTimer = 0;
+    let W, H;
+    let minBarH = 4;
+    let maxBarH = 16;
+    
+    function rndColor() {
+      return COLORS[Math.floor(Math.random() * COLORS.length)];
+    }
+
+    function buildBars() {
+      bars = [];
+      let y = H;
+      while (y > 0) {
+        const h = Math.floor(Math.random() * (maxBarH - minBarH + 1)) + minBarH;
+        bars.unshift({ y: y - h, h, color: rndColor() });
+        y -= h;
+      }
+    }
+
+    function drawBars() {
+      ctx.clearRect(0, 0, W, H);
+      for (const b of bars) {
+        ctx.fillStyle = b.color;
+        ctx.fillRect(0, b.y, W, b.h);
+      }
+    }
+
+    function animateMoving(ts) {
+      const dt = lastTime === 0 ? 16 : ts - lastTime;
+      lastTime = ts;
+
+      const scrollPx = 40 * (dt / 1000);
+      for (const b of bars) b.y += scrollPx;
+
+      while (bars.length > 0 && bars[bars.length - 1].y >= H) bars.pop();
+
+      let topFilled = bars.length > 0 ? bars[0].y : H;
+      while (topFilled > 0) {
+        const h = Math.floor(Math.random() * (maxBarH - minBarH + 1)) + minBarH;
+        bars.unshift({ y: topFilled - h, h, color: rndColor() });
+        topFilled -= h;
+      }
+
+      const recolorCount = Math.floor(bars.length * 0.05);
+      for (let i = 0; i < recolorCount; i++) {
+        bars[Math.floor(Math.random() * bars.length)].color = rndColor();
+      }
+
+      drawBars();
+
+      rafId = requestAnimationFrame(animateMoving);
+    }
+
+    function showAnim(duration) {
+      // Size canvas to match inner container
+      W = terminal.offsetWidth;
+      H = terminal.offsetHeight || 340;
+      canvas.width = W;
+      canvas.height = H;
+      animView.style.width = W + 'px';
+
+      terminal.style.display = 'none';
+      animView.style.display = 'flex';
+
+      buildBars();
+      lastTime = 0;
+      msgTimer = 0;
+      rafId = requestAnimationFrame(animateMoving);
+
+      animTimeout = setTimeout(stopAnim, duration);
+    }
+
+    function stopAnim() {
+      if (rafId) { cancelAnimationFrame(rafId); rafId = null; }
+      if (animTimeout) { clearTimeout(animTimeout); animTimeout = null; }
+      animView.style.display = 'none';
+      terminal.style.display = 'block';
+
+      // Add BREAK message to history
+      const rline = document.createElement('div');
+      rline.className = 'c64-response';
+      rline.textContent = 'READY.';
+      history.appendChild(rline);
+
+      input.focus();
+    }
 
     input.focus();
 
@@ -131,13 +263,21 @@ READY.</div>
       history.appendChild(line);
 
       const key = val.toLowerCase();
-      let resp = null;
 
+      if (key === 'run') {
+        const rline = document.createElement('div');
+        rline.className = 'c64-response';
+        rline.textContent = 'LOADING...';
+        history.appendChild(rline);
+        input.value = '';
+        showAnim(10000);
+        return;
+      }
+      
+
+      let resp = null;
       for (const k in responses) {
-        if (key === k || key.startsWith(k + ' ')) {
-          resp = responses[k];
-          break;
-        }
+        if (key === k || key.startsWith(k + ' ')) { resp = responses[k]; break; }
       }
 
       if (!resp) {
