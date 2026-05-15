@@ -26,14 +26,15 @@
       background: #3333AA;
       width: 640px;
       max-width: 90vw;
-      min-height: 340px;
       position: relative;
     }
 
     /* Terminal view */
     #terminal {
       padding: 1.5rem 2rem;
-      min-height: 340px;
+      height: 340px;
+      display: flex;
+      flex-direction: column;
     }
 
     .c64-text {
@@ -58,6 +59,8 @@
       font-size: 15px;
       text-transform: uppercase;
       white-space: pre-wrap;
+      overflow: hidden;
+      flex: 1;
     }
 
     .c64-response {
@@ -112,11 +115,7 @@
 
       <!-- Terminal -->
       <div id="terminal">
-        <div class="c64-top">    **** TONIENSTROM GITHUB IO V1 ****
 
- 64K RAM SYSTEM  314159 BASIC BYTES FREE
-
-READY.</div>
         <div class="c64-history" id="history"></div>
         <div class="c64-input-row">
           <span class="c64-text">&#9646;&nbsp;</span>
@@ -141,14 +140,11 @@ READY.</div>
     const ctx = canvas.getContext('2d');
 
     const responses = {
-      'help':         '? COMMANDS: HELP, LIST, LOAD, RUN, SYS, POKE, PRINT, NEW, CLR',
-      'list':         '10 PRINT "HELLO WORLD!"\n20 GOTO 10',
-      'new':          'READY.',
+      'help':         '? COMMANDS: HELP, LIST, LOAD, RUN, PRINT, CLR',
+      'list':         '16\t"COMMANDO"\tPRG\n23\t"DONALDDUCK"\tPRG\n32\t"IKPLUS"\tPRG\n8\t"JUMPMAN"\tPRG\n27\t"WHODARESWINS2"\tPRG\n26\t"WIZARDORWOR"\tPRG',
       'clr':          'READY.',
-      'sys 64738':    'RESTARTING...',
-      'poke 53280,0': 'READY.',
-      'poke 53281,0': 'READY.',
       'load':         'SEARCHING FOR PROGRAM...\nPRESS PLAY ON TAPE',
+      '?':         'YES?',
     };
 
     const COLORS = [
@@ -168,7 +164,7 @@ READY.</div>
     let W, H;
     let minBarH = 4;
     let maxBarH = 16;
-    
+
     function rndColor() {
       return COLORS[Math.floor(Math.random() * COLORS.length)];
     }
@@ -240,28 +236,65 @@ READY.</div>
       if (rafId) { cancelAnimationFrame(rafId); rafId = null; }
       if (animTimeout) { clearTimeout(animTimeout); animTimeout = null; }
       animView.style.display = 'none';
-      terminal.style.display = 'block';
+      terminal.style.display = 'flex';
 
-      // Add BREAK message to history
       const rline = document.createElement('div');
       rline.className = 'c64-response';
-      rline.textContent = 'READY.';
+      rline.textContent = 'TAPE ERROR\nREADY.';
       history.appendChild(rline);
 
-      input.focus();
+      requestAnimationFrame(() => {
+        history.scrollTop = history.scrollHeight;
+        input.focus();
+      });
     }
+
+    const bootMsg = document.createElement('div');
+    bootMsg.className = 'c64-top';
+    bootMsg.textContent = '    **** TONIENSTROM GITHUB IO V1 ****\n\n 64K RAM SYSTEM  314159 BASIC BYTES FREE\n\nREADY.';
+    history.appendChild(bootMsg);
+
+    requestAnimationFrame(() => {
+      const lineHeight = 15 * 1.6; // font-size * line-height
+      const histH = history.offsetHeight;
+      const bootH = bootMsg.offsetHeight;
+      const emptyLines = Math.floor((histH - bootH) / lineHeight);
+      
+      if (emptyLines > 0) {
+        const filler = document.createElement('div');
+        filler.textContent = '\n'.repeat(emptyLines);
+        filler.style.whiteSpace = 'pre';
+        history.appendChild(filler);
+        history.scrollTop = history.scrollHeight;
+      }
+    });
+    
+    const extraLine = document.createElement('div');
+    extraLine.textContent = '\n'.repeat(1);
+    extraLine.style.whiteSpace = 'pre';
+    history.appendChild(extraLine);
+    history.scrollTop = history.scrollHeight;
 
     input.focus();
 
     input.addEventListener('keydown', function(e) {
+
       if (e.key !== 'Enter') return;
+
       const val = input.value.trim();
-      if (!val) return;
+      if (!val) {
+        const empty = document.createElement('div');
+        empty.textContent = ' ';
+        empty.style.whiteSpace = 'pre';
+        history.appendChild(empty);
+        history.scrollTop = history.scrollHeight;
+        return;
+      }
 
       const line = document.createElement('div');
       line.textContent = '\u25a6 ' + val.toUpperCase();
       history.appendChild(line);
-
+      history.scrollTop = history.scrollHeight;
       const key = val.toLowerCase();
 
       if (key === 'run') {
@@ -269,8 +302,9 @@ READY.</div>
         rline.className = 'c64-response';
         rline.textContent = 'LOADING...';
         history.appendChild(rline);
+        history.scrollTop = history.scrollHeight;
         input.value = '';
-        showAnim(10000);
+        showAnim(2000);
         return;
       }
       
@@ -293,7 +327,7 @@ READY.</div>
       rline.className = 'c64-response';
       rline.textContent = resp;
       history.appendChild(rline);
-
+      history.scrollTop = history.scrollHeight;
       input.value = '';
     });
   </script>
